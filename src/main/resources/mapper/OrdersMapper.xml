@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.emall.mapper.OrdersMapper">
+    <select id="getOrders" parameterType="java.util.Map" resultMap="orderMap">
+        select * from orders natural join orderdetail natural join goods
+        natural join sort natural join provider
+        <where>
+            <if test="gname!=null and gname!=''">
+                and gname like concat('%',#{gname},'%')
+            </if>
+            <if test="begintime!=null and begintime!='' and endtime!=null and endtime!=''">
+                and otime between str_to_date(#{begintime},'%Y-%m-%d %H:%i:%s')
+                      and str_to_date(#{endtime},'%Y-%m-%d %H:%i:%s')
+            </if>
+            <if test="state!=null and state!=0">
+                and state=#{state}
+            </if>
+            <if test="paytype!=null and paytype!=0">
+                and paytype=#{paytype}
+            </if>
+        </where>
+        order by oid desc
+    </select>
+
+    <resultMap id="orderMap" type="orders" autoMapping="true">
+        <id column="oid" property="oid"/>
+        <collection property="orderlist" ofType="Orderdetail" autoMapping="true">
+            <association property="goods" javaType="goods" autoMapping="true">
+                <association property="sort" javaType="sort" autoMapping="true"/>
+                <association property="provider" javaType="provider" autoMapping="true"/>
+            </association>
+        </collection>
+    </resultMap>
+
+    <update id="changeState" parameterType="orders">
+        update orders set state=#{state} where oid=#{oid}
+    </update>
+
+    <insert id="getOid" parameterType="orders">
+        insert into orders(paytype,sum,otime,ename,state)
+        values(#{paytype},#{sum},sysdate(),#{ename},#{state})
+        <selectKey keyProperty="oid" order="AFTER" resultType="int">
+            select last_insert_id()
+        </selectKey>
+    </insert>
+
+    <insert id="addOrders" parameterType="java.util.List">
+        insert into orderdetail values
+        <foreach collection="orderdetails" item="item" index="index" separator=",">
+            (
+             #{item.oid},
+             #{item.goods.gid},
+             #{item.quantity},
+             #{item.total}
+            )
+        </foreach>
+    </insert>
+
+    <select id="getOrderdetails" resultMap="detailMap" parameterType="String">
+        select * from orderdetail natural join goods
+        natural join sort natural join provider
+        <where>
+            <if test="gname!=null and gname!=''">
+                and gname like concat('%',#{gname},'%')
+            </if>
+        </where>
+        order by oid desc
+    </select>
+
+    <resultMap id="detailMap" type="orderdetail" autoMapping="true">
+        <association property="goods" javaType="goods" autoMapping="true">
+            <association property="sort" javaType="sort" autoMapping="true"/>
+            <association property="provider" javaType="provider" autoMapping="true"/>
+        </association>
+    </resultMap>
+
+    <select id="getDaySale" parameterType="java.util.Map" resultType="java.util.Map">
+        select sum(sum) sum,date_format(otime,'%Y-%m-%d') odate
+        from orders
+        where date_format(otime,'%Y-%m-%d')
+                  between str_to_date(#{begindate},'%Y-%m-%d') and str_to_date(#{enddate},'%Y-%m-%d')
+        group by date_format(otime,'%Y-%m-%d');
+    </select>
+    <select id="getSortSale" parameterType="java.util.Map" resultType="java.util.Map">
+        select ifnull(count(1),0) value,d.sname name
+        from(select * from orders natural join orderdetail natural join goods
+          natural join sort natural join provider
+           where  date_format(otime,'%Y-%m-%d')
+           between str_to_date(#{begindate},'%Y-%m-%d') and str_to_date(#{enddate},'%Y-%m-%d')) as d
+        group by sid
+    </select>
+
+    <select id="getEmpSale" parameterType="java.util.Map" resultType="java.util.Map">
+        select ifnull(count(1),0) count,ifnull(sum(sum),0)/100 sum,ename name from orders
+        where  date_format(otime,'%Y-%m-%d')
+                   between str_to_date(#{begindate},'%Y-%m-%d') and str_to_date(#{enddate},'%Y-%m-%d')
+        group by ename
+        order by sum desc
+    </select>
+
+</mapper>

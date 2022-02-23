@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.emall.mapper.VipMapper">
+    <select id="getVips" resultMap="vipMap">
+        <!-- 使用concat减少sql注入风险,模糊查询的推举写法 -->
+        select * from vip natural join vclass
+        <where>
+            <if test="vname!=null and vname!=''">
+               and vname like concat('%',#{vname},'%')
+            </if>
+        </where>
+        order by vid desc
+    </select>
+
+    <resultMap id="vipMap" type="vip" autoMapping="true">
+        <id column="vid" property="vid"/>
+        <association property="vclass" javaType="vclass" autoMapping="true"/>
+    </resultMap>
+
+    <select id="getVipById" parameterType="int" resultMap="vipMap">
+        select * from vip natural join vclass where vid=#{vid}
+    </select>
+
+    <update id="recharge" parameterType="vip">
+        update vip set bal=bal+#{bal} where vid=#{vid}
+    </update>
+
+    <insert id="addVip" parameterType="vip">
+        insert into vip(vname,bal,classid,tel)
+        values(#{vname},#{bal},#{vclass.classid},#{tel})
+    </insert>
+
+    <update id="updateVip" parameterType="vip">
+        update vip set vname=#{vname},bal=#{bal},classid=#{vclass.classid},tel=#{tel}
+        where vid=#{vid}
+    </update>
+
+
+</mapper>

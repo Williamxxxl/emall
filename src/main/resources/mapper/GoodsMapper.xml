@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.emall.mapper.GoodsMapper">
+    <select id="getGoodsList" resultMap="goodsMap">
+        select * from goods natural join sort natural join provider
+        <where>
+            <if test="gname!=null and gname!=''">
+                and gname like concat('%',#{gname},'%')
+            </if>
+            <if test="sort.sid!=null and sort.sid!=0">
+                and sid=#{sort.sid}
+            </if>
+            <if test="provider.pid!=null and provider.pid!=0">
+                and pid=#{provider.pid}
+            </if>
+            <if test="isdiscount!=null and isdiscount!=0">
+                and isdiscount=#{isdiscount}
+            </if>
+            <if test="gstate!=null and gstate!=0">
+                and gstate=#{gstate}
+            </if>
+        </where>
+        order by gid
+    </select>
+
+    <resultMap id="goodsMap" type="goods" autoMapping="true">
+        <id column="gid" property="gid"/>
+        <association property="sort" javaType="sort" autoMapping="true"/>
+        <association property="provider" javaType="provider" autoMapping="true"/>
+    </resultMap>
+
+    <update id="changeState" parameterType="goods">
+        update goods set gstate=#{gstate} where gid=#{gid}
+    </update>
+
+    <update id="changeIsdiscount" parameterType="goods">
+        update goods set isdiscount=#{isdiscount} where gid=#{gid}
+    </update>
+
+    <insert id="addGoods" parameterType="goods">
+        insert into goods(gname,sid,pid,price,unit,gstate,isdiscount)
+        values(#{gname},#{sort.sid},#{provider.pid},#{price},#{unit},#{gstate},#{isdiscount})
+    </insert>
+
+    <delete id="delGoods" parameterType="int">
+        delete from goods where gid=#{gid}
+    </delete>
+
+    <update id="updateGoods" parameterType="goods">
+        update goods set gname=#{gname},sid=#{sort.sid},pid=#{provider.pid},price=#{price},unit=#{unit}
+        where gid=#{gid}
+    </update>
+</mapper>
